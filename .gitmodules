@@ -1,0 +1,6 @@
+[submodule "thirdparty/transformers"]
+	path = thirdparty/transformers
+	url = https://github.com/huggingface/transformers.git
+[submodule "thirdparty/peft"]
+	path = thirdparty/peft
+	url = https://github.com/huggingface/peft.git

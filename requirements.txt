@@ -1,0 +1,14 @@
+# common
+numpy
+notebook
+
+# pytorch
+torch==2.7.1+cu118
+torchaudio==2.7.1+cu118
+torchvision==0.22.1+cu118
+
+# thirdparty
+-e thirdparty/transformers --no-build-isolation
+-e thirdparty/peft --no-build-isolation
+
+setuptools
