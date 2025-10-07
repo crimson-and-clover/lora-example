@@ -4,3 +4,6 @@
 [submodule "thirdparty/peft"]
 	path = thirdparty/peft
 	url = https://github.com/huggingface/peft.git
+[submodule "thirdparty/trl"]
+	path = thirdparty/trl
+	url = https://github.com/huggingface/trl.git

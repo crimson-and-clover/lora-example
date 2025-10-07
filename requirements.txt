@@ -10,5 +10,8 @@ torchvision==0.22.1+cu118
 # thirdparty
 -e thirdparty/transformers --no-build-isolation
 -e thirdparty/peft --no-build-isolation
+-e thirdparty/trl --no-build-isolation
 
 setuptools
+datasets
+tqdm
