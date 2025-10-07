@@ -1,93 +1,52 @@
+from pathlib import Path
+
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import tqdm
-from datasets import load_dataset
-from peft import LoraConfig, TaskType, get_peft_model
-from transformers import AutoModelForCausalLM, AutoTokenizer, TrainingArguments
-from transformers.tokenization_utils_fast import PreTrainedTokenizerFast
-from trl import SFTConfig, SFTTrainer
+from transformers import AutoTokenizer
 
-model_name = "huggingface/meta-llama/Llama-3.2-3B-Instruct"
-tokenizer: PreTrainedTokenizerFast = AutoTokenizer.from_pretrained(model_name)
-base_model = AutoModelForCausalLM.from_pretrained(model_name)
+if __name__ == "__main__":
+    model_name = "huggingface/meta-llama/Llama-3.2-3B-Instruct"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-datasets_id = "huggingface/allenai/tulu-3-sft-mixture"
+    messages = [
+        {"role": "user", "content": "Hello, how are you?"},
+        {"role": "assistant", "content": "I am fine, thank you!"},
+        {"role": "user", "content": "What is your name?"},
+        {"role": "assistant", "content": "My name is Llama."},
+    ]
 
-raw_ds = load_dataset(datasets_id, split="train")
+    my_template = ""
 
+    with open("llama-3.2.jinja2", "r", encoding="utf-8") as f:
+        my_template = f.read()
 
-def filter_func(x):
-    msg = x["messages"]
-    if not any(m["role"] == "assistant" and m["content"].strip() != "" for m in msg):
-        return False
-    src = x["source"]
-    allowed_src = ["math", "science", "history", "literature"]
-    for allowed in allowed_src:
-        if allowed in src:
-            return True
-    return False
+    origin_str = tokenizer.apply_chat_template(
+        messages, tokenize=False, add_generation_prompt=True)
 
+    my_str = tokenizer.apply_chat_template(
+        messages, tokenize=False, chat_template=my_template, add_generation_prompt=True)
 
-raw_ds = raw_ds.filter(filter_func).flatten_indices()
+    assert origin_str == my_str
 
-raw_ds = raw_ds.train_test_split(test_size=0.005, seed=42)
+    origin_str = tokenizer.apply_chat_template(messages, tokenize=False)
 
-train_ds = raw_ds["train"]
-eval_ds = raw_ds["test"]
+    my_str = tokenizer.apply_chat_template(
+        messages, tokenize=False, chat_template=my_template)
 
-train_ds = train_ds.shuffle(seed=42)
+    assert origin_str == my_str
 
-mini_ds = train_ds.select(range(10))
+    processed = tokenizer.apply_chat_template(
+        messages, return_dict=True, return_assistant_tokens_mask=True, chat_template=my_template)
 
-print("size of train dataset: ", len(train_ds))
-print("size of eval dataset: ", len(eval_ds))
+    assistant_masks = torch.tensor(processed["assistant_masks"]).to(torch.bool)
+    input_ids = torch.tensor(processed["input_ids"])
 
-my_template = ""
+    gen_ids = input_ids[assistant_masks]
 
-with open("llama-3.2.jinja2", "r", encoding="utf-8") as f:
-    my_template = f.read()
+    decoded_str = tokenizer.decode(gen_ids)
 
-msg = mini_ds[0]["messages"]
+    gt_str = "".join(
+        [f"{x['content']}<|eot_id|>" for x in messages if x["role"] == "assistant"])
 
-origin_str = tokenizer.apply_chat_template(
-    msg, tokenize=False, add_generation_prompt=True)
+    assert decoded_str == gt_str
 
-my_str = tokenizer.apply_chat_template(
-    msg, tokenize=False, chat_template=my_template, add_generation_prompt=True)
-
-assert origin_str == my_str
-
-origin_str = tokenizer.apply_chat_template(msg, tokenize=False)
-
-my_str = tokenizer.apply_chat_template(
-    msg, tokenize=False, chat_template=my_template)
-
-assert origin_str == my_str
-
-new_msg = msg + [{"role": "assistant", "content": "Hello, how are you?"}]
-
-origin_str = tokenizer.apply_chat_template(
-    new_msg, tokenize=False, add_generation_prompt=True)
-
-my_str = tokenizer.apply_chat_template(
-    new_msg, tokenize=False, chat_template=my_template, add_generation_prompt=True)
-
-assert origin_str == my_str
-
-processed = tokenizer.apply_chat_template(
-    new_msg, return_dict=True, return_assistant_tokens_mask=True, chat_template=my_template)
-
-assistant_masks = torch.tensor(processed["assistant_masks"]).to(torch.bool)
-input_ids = torch.tensor(processed["input_ids"])
-
-print(processed["assistant_masks"])
-
-gen_ids = input_ids[assistant_masks]
-
-decoded_str = tokenizer.decode(gen_ids)
-print(decoded_str)
-
-
-print("test_custom_template passed")
+    print(f"{Path(__file__).stem} passed")
