@@ -51,16 +51,43 @@ with open("llama-3.2.jinja2", "r", encoding="utf-8") as f:
 
 msg = mini_ds[0]["messages"]
 
-origin_str = tokenizer.apply_chat_template(msg, tokenize=False, add_generation_prompt=True)
+origin_str = tokenizer.apply_chat_template(
+    msg, tokenize=False, add_generation_prompt=True)
 
-my_str = tokenizer.apply_chat_template(msg, tokenize=False, chat_template=my_template, add_generation_prompt=True)
+my_str = tokenizer.apply_chat_template(
+    msg, tokenize=False, chat_template=my_template, add_generation_prompt=True)
 
 assert origin_str == my_str
 
 origin_str = tokenizer.apply_chat_template(msg, tokenize=False)
 
-my_str = tokenizer.apply_chat_template(msg, tokenize=False, chat_template=my_template)
+my_str = tokenizer.apply_chat_template(
+    msg, tokenize=False, chat_template=my_template)
 
 assert origin_str == my_str
+
+new_msg = msg + [{"role": "assistant", "content": "Hello, how are you?"}]
+
+origin_str = tokenizer.apply_chat_template(
+    new_msg, tokenize=False, add_generation_prompt=True)
+
+my_str = tokenizer.apply_chat_template(
+    new_msg, tokenize=False, chat_template=my_template, add_generation_prompt=True)
+
+assert origin_str == my_str
+
+processed = tokenizer.apply_chat_template(
+    new_msg, return_dict=True, return_assistant_tokens_mask=True, chat_template=my_template)
+
+assistant_masks = torch.tensor(processed["assistant_masks"]).to(torch.bool)
+input_ids = torch.tensor(processed["input_ids"])
+
+print(processed["assistant_masks"])
+
+gen_ids = input_ids[assistant_masks]
+
+decoded_str = tokenizer.decode(gen_ids)
+print(decoded_str)
+
 
 print("test_custom_template passed")
