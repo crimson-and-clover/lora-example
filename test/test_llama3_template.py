@@ -16,7 +16,7 @@ if __name__ == "__main__":
 
     my_template = ""
 
-    with open("llama-3.2.jinja2", "r", encoding="utf-8") as f:
+    with open("template/llama-3.2.jinja2", "r", encoding="utf-8") as f:
         my_template = f.read()
 
     origin_str = tokenizer.apply_chat_template(
